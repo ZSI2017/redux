@@ -30,7 +30,35 @@
         }
       }
 
-      var store = Redux.createStore(counter)
+      var logger = function (store) {
+          return function wrapDispatchToAddLogging(next) {
+            return function dispatchAndLog(action) {
+              console.group(action.type);
+              console.info('dispatching', action);
+              let result = next(action);
+              console.log('next state', store.getState());
+              console.log('result', result);
+              console.groupEnd(action.type);
+            //  return result;
+            }
+          }
+      }
+
+      var loggerB = function (store) {
+          return function wrapDispatchToAddLogging(next) {
+            return function dispatchAndLog(action) {
+              console.group(action.type + "B");
+              console.info('dispatchingB ', action);
+              let result = next(action);
+              console.log('next stateBB', store.getState());
+              console.log('resultB', result);
+              console.groupEnd(action.type + "B");
+            //  return result;
+            }
+          }
+      }
+
+      var store = Redux.createStore(counter, Redux.applyMiddleware(logger,loggerB))
       var valueEl = document.getElementById('value')
 
       function render() {

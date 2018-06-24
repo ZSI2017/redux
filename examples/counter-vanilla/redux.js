@@ -339,9 +339,10 @@ function createStore(reducer, preloadedState, enhancer) {
   // When a store is created, an "INIT" action is dispatched so that every
   // reducer returns their initial state. This effectively populates
   // the initial state tree.
-  //  方便初始化 state 树，返回 state 对象。
+  // 方便初始化 state 树，返回 state 对象。
   dispatch({ type: ActionTypes.INIT });
 
+  // _ref2 修改完成后，返回。
   return _ref2 = {
     dispatch: dispatch,
     subscribe: subscribe,
@@ -525,6 +526,9 @@ function combineReducers(reducers) {
 
 function bindActionCreator(actionCreator, dispatch) {
   return function () {
+		// 传入的如果是单一的 函数。
+		// 返回被 dispatch 函数包裹的 actioncreator，
+		// 方便后面直接调用，而不用再传入 actionscreator;
     return dispatch(actionCreator.apply(this, arguments));
   };
 }
@@ -538,6 +542,7 @@ function bindActionCreator(actionCreator, dispatch) {
  * For convenience, you can also pass a single function as the first argument,
  * and get a function in return.
  *
+ * // 与 combineReducers 类似 可以利用 import * as syntax ，引入所有的 actions creators 形成的 object;，或者传入一个单独的函数。
  * @param {Function|Object} actionCreators An object whose values are action
  * creator functions. One handy way to obtain it is to use ES6 `import * as`
  * syntax. You may also pass a single function.
@@ -556,18 +561,24 @@ function bindActionCreators(actionCreators, dispatch) {
   }
 
   if ((typeof actionCreators === 'undefined' ? 'undefined' : _typeof(actionCreators)) !== 'object' || actionCreators === null) {
+	// 抛出错误。
     throw new Error('bindActionCreators expected an object or a function, instead received ' + (actionCreators === null ? 'null' : typeof actionCreators === 'undefined' ? 'undefined' : _typeof(actionCreators)) + '. ' + 'Did you write "import ActionCreators from" instead of "import * as ActionCreators from"?');
   }
 
   var keys = Object.keys(actionCreators);
   var boundActionCreators = {};
+	// 遍历 actionCreators 对象。
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var actionCreator = actionCreators[key];
     if (typeof actionCreator === 'function') {
+			// 对每个vualue 为 actioncreator 的函数，进行转换。
       boundActionCreators[key] = bindActionCreator(actionCreator, dispatch);
     }
   }
+	// 返回对象的key 保存不变
+	// 只是 value 中被 dispatch 包裹，
+	// 后面dispatch 对应的 actions ,可以直接使用里面的对应的函数调用。
   return boundActionCreators;
 }
 
@@ -584,19 +595,22 @@ function bindActionCreators(actionCreators, dispatch) {
 
 function compose() {
   for (var _len = arguments.length, funcs = Array(_len), _key = 0; _key < _len; _key++) {
+		// 收集所有传入的 函数。
     funcs[_key] = arguments[_key];
   }
 
   if (funcs.length === 0) {
+		// 没有传入任何函数，则生成一个 返回参数的函数。
     return function (arg) {
       return arg;
     };
   }
 
   if (funcs.length === 1) {
+		// 只有一个函数， 则直接返回该函数。
     return funcs[0];
   }
-
+  // 利用数组的 reduce 方法，保证保证 从左到右， 函数依次嵌套执行。
   return funcs.reduce(function (a, b) {
     return function () {
       return a(b.apply(undefined, arguments));
@@ -604,7 +618,7 @@ function compose() {
   });
 }
 
-/**
+/**  这类框架中， middleware 是指可以被嵌入在框架接收请求到产生响应过程之中的代码。
  * Creates a store enhancer that applies middleware to the dispatch method
  * of the Redux store. This is handy for a variety of tasks, such as expressing
  * asynchronous actions in a concise manner, or logging every action payload.
@@ -617,11 +631,14 @@ function compose() {
  * Note that each middleware will be given the `dispatch` and `getState` functions
  * as named arguments.
  *
+ *   return enhancer(createStore)(reducer, preloadedState);
+ *
  * @param {...Function} middlewares The middleware chain to be applied.
  * @returns {Function} A store enhancer applying the middleware.
  */
 function applyMiddleware() {
   for (var _len = arguments.length, middlewares = Array(_len), _key = 0; _key < _len; _key++) {
+		// 收集 middleware 数组。
     middlewares[_key] = arguments[_key];
   }
 
@@ -630,7 +647,7 @@ function applyMiddleware() {
       for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
         args[_key2] = arguments[_key2];
       }
-
+      // 拿到 原本返回的 store 对象。
       var store = createStore.apply(undefined, args);
       var _dispatch = function dispatch() {
         throw new Error('Dispatching while constructing your middleware is not allowed. ' + 'Other middleware would not be applied to this dispatch.');
@@ -642,7 +659,10 @@ function applyMiddleware() {
           return _dispatch.apply(undefined, arguments);
         }
       };
+			// 将 getState 和 dispatch 两个函数方法 传给每个 中间件。
       var chain = middlewares.map(function (middleware) {
+				// 执行了一次中间件，传入 store --> middlewareAPI，
+				// 暴露出 wrapDispatch;
         return middleware(middlewareAPI);
       });
       _dispatch = compose.apply(undefined, chain)(store.dispatch);
